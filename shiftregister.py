@@ -35,7 +35,7 @@ class ShiftRegister():
                     self.buffer.popleft()
                     self.buffer.append(self.data_val)
             # else:
-                # print ("clock low")
+            #     print ("clock low")
 
         self.lastclock = value
 
@@ -67,8 +67,12 @@ class ShiftRegister():
 
     def printregister(self):
         if self.registerchangedsinceprint:
+            ct = 0
             for i in self.register:
                 print ("*" if i else "-", end='')
+                ct += 1
+                if ct % 8 == 0:
+                    print ()
             print ()
             self.registerchangedsinceprint = False
 

@@ -22,7 +22,7 @@ mmu = MMU([
 # 2600 it is in the zero page, stack_page=0.
 c = CPU(mmu, 0x8000)
 
-sr = ShiftRegister(8)
+sr = ShiftRegister(40)
 
 def bit(val, bit):
     return (val >> bit) & 1
@@ -55,7 +55,7 @@ while True:
         print ('index error')
         exit()
 
-    time.sleep(0.0005)
+    time.sleep(0.0002)
     counter += 1
 
     if counter == 10:
@@ -65,13 +65,13 @@ while True:
         c.writeByte(0x6008, 1)
 
     if counter == 8000:
-        c.writeByte(0x6008, 3)
-
-    if counter == 12000:
         c.writeByte(0x6008, 2)
 
-    if counter == 16000:
+    if counter == 12000:
         c.writeByte(0x6008, 3)
+
+    if counter == 16000:
+        c.writeByte(0x6008, 2)
     
 
 

@@ -1,12 +1,15 @@
-SOURCEBYTE  = $0000
-WORKBYTE    = $0001
-PATTERNBYTE = $0002
-PORTA       = $6000
-input_a     = $0003
-input_x     = $0004
-input_y     = $0005
-RANDOMSTEP  = $0006
-
+SOURCEBYTE   = $0000
+WORKBYTE     = $0001
+PATTERNBYTE  = $0002
+PORTA        = $6000
+input_a      = $0003
+input_x      = $0004
+input_y      = $0005
+RANDOMSTEP   = $0006
+BLINKHIGH    = $0007
+BLINKLOW     = $0008
+BLINKCOUNTER = $0009
+PAUSE_X      = $000a
 
 
     .org $8000
@@ -16,7 +19,6 @@ reset:
     ldy #0
     sty RANDOMSTEP
 
-    jsr checkinput
 
 
 checkinput:
@@ -26,21 +28,31 @@ checkinput:
 
     ldx $6008
     cpx #0
-    beq startcycle
+    beq ci_startcycle
     cpx #1
-    beq startcycle2
+    beq ci_startcycle2
     cpx #2
-    beq randomloop
+    beq ci_randomloop
     cpx #3
-    beq blinkstart
+    beq ci_blinkstart
 
     lda input_a
     ldx input_x
     ldy input_y
 
-    rts
 
-    
+
+ci_startcycle:
+    jmp startcycle
+
+ci_startcycle2:
+    jmp startcycle2
+
+ci_randomloop:
+    jmp randomloop
+
+ci_blinkstart:
+    jmp blinkstart
 
 
     
@@ -50,19 +62,20 @@ startcycle:
 
     lda #%10000000  ; source byte
     sta SOURCEBYTE
-    jsr shiftout
+    jsr singleshift
 
  cycle:
     lda SOURCEBYTE
     lsr a
     sta SOURCEBYTE
-    jsr shiftout
+    jsr singleshift
+    jsr pause
 
     iny
     cpy #7
     bne cycle
 
-    jsr checkinput
+    jmp checkinput
     
 
 
@@ -71,20 +84,21 @@ startcycle2
 
     lda #%00000001  ; source byte
     sta SOURCEBYTE
-    jsr shiftout
+    jsr singleshift
 
 
  cycle2:
     lda SOURCEBYTE
     asl a
     sta SOURCEBYTE
-    jsr shiftout
+    jsr singleshift
+    jsr pause
 
     iny
     cpy #7
     bne cycle2
     
-    jsr checkinput
+    jmp checkinput
 
 
 
@@ -92,54 +106,133 @@ startcycle2
 
 randomloop:
     ldy RANDOMSTEP
+
+
+    jsr shiftstart
     lda $8000, y ; program code ftw
     sta SOURCEBYTE
     jsr shiftout
     iny
+    lda $8000, y ; program code ftw
+    sta SOURCEBYTE
+    jsr shiftout
+    iny
+    lda $8000, y ; program code ftw
+    sta SOURCEBYTE
+    jsr shiftout
+    iny
+    lda $8000, y ; program code ftw
+    sta SOURCEBYTE
+    jsr shiftout
+    iny
+    lda $8000, y ; program code ftw
+    sta SOURCEBYTE
+    jsr shiftout
+    iny
+    jsr shiftend
+
     sty RANDOMSTEP
-    jsr checkinput
-    cpy #109
+    jmp checkinput
+    cpy #150
     bne randomloop
-    beq reset
+    beq randomreset
 
-
-
-blinkstart:
-    lda #$ff
-    sta SOURCEBYTE
-    jsr shiftout
-    ldx #0
-
-blinkonwait:
-    inx
-    cpx #40
-    bne blinkonwait
-
-    lda #$00
-    sta SOURCEBYTE
-    jsr shiftout
-    ldx #0
-
-blinkoffwait:
-    inx
-    cpx #40
-    bne blinkoffwait
-    beq blinkreset
-
-blinkreset:
+randomreset:
     jmp reset
 
 
 
+blinkstart:
+    lda BLINKHIGH
+    sta SOURCEBYTE
+    jsr singleshift
+    ldx #0
+
+blinkonwait:
+    inx
+    cpx #120
+    bne blinkonwait
+
+    lda BLINKLOW
+    sta SOURCEBYTE
+    jsr singleshift
+    ldx #0
+
+blinkoffwait:
+    inx
+    cpx #120
+    bne blinkoffwait
+    beq blinkcounterincrement
+
+blinkcounterincrement:
+    ldy BLINKCOUNTER
+    iny
+    sty BLINKCOUNTER
+    cpy #10
+    beq blinkpattern1
+    cpy #20
+    beq blinkpattern2
+    cpy #30
+    beq blinkpattern3
+    cpy #40
+    beq resetblinkcounter
+    jmp blinkreset
+
+blinkpattern1:
+    lda #%11111111
+    sta BLINKHIGH
+    lda #%00000000
+    sta BLINKLOW
+    jmp blinkreset
+
+blinkpattern2:
+    lda #%11110000
+    sta BLINKHIGH
+    lda #%10101010
+    sta BLINKLOW
+    jmp blinkreset
+
+blinkpattern3:
+    lda #%11001100
+    sta BLINKHIGH
+    lda #%00110011
+    sta BLINKLOW
+    jmp blinkreset
+
+resetblinkcounter:
+    lda #0
+    sta BLINKCOUNTER
+
+blinkreset:
+    jmp checkinput
 
 
 
-shiftout:
+
+singleshift:
+    jsr shiftstart
+    jsr shiftout
+    jsr shiftend
+    rts
+
+
+
+shiftstart:
     lda #%00000100  ; latch high
     sta PORTA       ; send to shift register
     lda #%00000000  ; latch low; begin shifting
     sta PORTA       ; send to shift register
+    rts
 
+
+shiftend:
+    lda #%00000100  ; latch high; we're done here
+    sta PORTA       ; send to shift register
+    rts
+
+
+
+shiftout:
     ldx #$00        ; shift counter
 
     lda SOURCEBYTE  ; source byte
@@ -152,10 +245,7 @@ shiftout:
     ora #2          ; set clock bit high
     sta PORTA       ; send to shift register
 
-    jsr shiftsteps
-
-    lda #%00000100  ; latch high; we're done here
-    sta PORTA       ; send to shift register
+    jsr shiftsteps  ; shift remaining steps
 
     rts
 
@@ -176,6 +266,22 @@ shiftsteps:
     cpx #7          ; go to eight bits
     bne shiftsteps  ; if we're not there, repeat
 
+    rts
+
+
+pause:
+    stx PAUSE_X
+    ldx #0
+    jsr pauseloop
+    rts
+
+
+pauseloop:
+    inx
+    cpx #80
+    bne pauseloop
+
+    ldx PAUSE_X
     rts
 
 
