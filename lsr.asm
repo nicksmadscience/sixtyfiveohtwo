@@ -10,6 +10,7 @@ BLINKHIGH    = $0007
 BLINKLOW     = $0008
 BLINKCOUNTER = $0009
 PAUSE_X      = $000a
+PAUSETIME    = $000b
 
 
     .org $8000
@@ -18,6 +19,13 @@ PAUSE_X      = $000a
 reset:
     ldy #0
     sty RANDOMSTEP
+    ldy #%11111111
+    sty BLINKHIGH
+    ldy #%00000000
+    sty BLINKLOW
+
+    lda #150            ; standard pause time; adjust according to clock speed
+    sta PAUSETIME
 
 
 
@@ -35,6 +43,12 @@ checkinput:
     beq ci_randomloop
     cpx #3
     beq ci_blinkstart
+    cpx #4
+    beq ci_randomcascadeloop
+    cpx #5
+    beq ci_allblink
+    cpx #6
+    beq ci_cylon
 
     lda input_a
     ldx input_x
@@ -53,6 +67,15 @@ ci_randomloop:
 
 ci_blinkstart:
     jmp blinkstart
+
+ci_randomcascadeloop
+    jmp randomcascadeloop
+
+ci_allblink
+    jmp allblink
+
+ci_cylon
+    jmp cylon
 
 
     
@@ -142,29 +165,45 @@ randomreset:
 
 
 
+randomcascadeloop:
+    ldy RANDOMSTEP
+
+    lda $8000, y ; program code ftw
+    sta SOURCEBYTE
+    jsr singleshift
+    iny
+    
+    sty RANDOMSTEP
+    jsr pause
+    jmp checkinput
+    cpy #150
+    bne randomcascadeloop
+    beq randomcascadereset
+
+
+randomcascadereset:
+    jmp reset
+
+
+
 blinkstart:
     lda BLINKHIGH
     sta SOURCEBYTE
     jsr singleshift
     ldx #0
 
-blinkonwait:
-    inx
-    cpx #120
-    bne blinkonwait
+    jsr pause
+    jsr pause
 
     lda BLINKLOW
     sta SOURCEBYTE
     jsr singleshift
     ldx #0
 
-blinkoffwait:
-    inx
-    cpx #120
-    bne blinkoffwait
-    beq blinkcounterincrement
+    jsr pause
+    jsr pause
 
-blinkcounterincrement:
+    ; increment blink counter
     ldy BLINKCOUNTER
     iny
     sty BLINKCOUNTER
@@ -205,6 +244,78 @@ resetblinkcounter:
 
 blinkreset:
     jmp checkinput
+
+
+
+allblink:
+    lda #$ff
+    sta SOURCEBYTE
+
+    jsr shiftfive
+    jsr pause
+    jsr pause
+    jsr pause
+
+    lda #$00
+    sta SOURCEBYTE
+
+    jsr shiftfive
+    jsr pause
+    jsr pause
+    jsr pause
+
+    jmp checkinput
+
+
+shiftfive:
+    jsr shiftstart
+    jsr shiftout
+    jsr shiftout
+    jsr shiftout
+    jsr shiftout
+    jsr shiftout
+    jsr shiftend
+    rts
+
+
+
+cylon:
+    lda #%10000000
+    sta SOURCEBYTE
+    jsr shiftfive
+
+    jsr cylonleft
+    jsr cylonleft
+    jsr cylonleft
+    jsr cylonleft
+    jsr cylonleft
+    jsr cylonleft
+    jsr cylonleft
+
+    jsr cylonright
+    jsr cylonright
+    jsr cylonright
+    jsr cylonright
+    jsr cylonright
+    jsr cylonright
+    jsr cylonright
+
+    jmp checkinput
+
+
+cylonleft:
+    lda SOURCEBYTE
+    lsr a
+    sta SOURCEBYTE
+    jsr shiftfive
+    rts
+
+cylonright:
+    lda SOURCEBYTE
+    asl a
+    sta SOURCEBYTE
+    jsr shiftfive
+    rts
 
 
 
@@ -278,7 +389,7 @@ pause:
 
 pauseloop:
     inx
-    cpx #80
+    cpx PAUSETIME
     bne pauseloop
 
     ldx PAUSE_X

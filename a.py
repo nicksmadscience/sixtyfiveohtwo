@@ -40,6 +40,7 @@ for i in range(0, 10):
 
 # Do this to execute one instruction
 counter = 0
+mode = 0
 while True:
     try:
         c.step()
@@ -55,23 +56,17 @@ while True:
         print ('index error')
         exit()
 
-    time.sleep(0.0002)
+    time.sleep(0.0001)
     counter += 1
 
-    if counter == 10:
-        c.writeByte(0x6008, 0)
+    
+    if counter % 20000 == 0:
+        mode += 1
+        if mode == 8:
+            mode = 0
+        c.writeByte(0x6008, mode)
 
-    if counter == 4000:
-        c.writeByte(0x6008, 1)
 
-    if counter == 8000:
-        c.writeByte(0x6008, 2)
-
-    if counter == 12000:
-        c.writeByte(0x6008, 3)
-
-    if counter == 16000:
-        c.writeByte(0x6008, 2)
     
 
 
