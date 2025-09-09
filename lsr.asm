@@ -28,6 +28,20 @@ cycle:
     bne cycle
 
 
+    ldy #$00        ; fx counter 
+
+
+cycle2:
+    lda SOURCEBYTE
+    asl a
+    sta SOURCEBYTE
+    jsr shiftout
+
+    iny
+    cpy #7
+    bne cycle2
+
+
     jmp end
 
 
@@ -60,9 +74,9 @@ shiftout:
 
 
 shiftsteps:
-    lda WORKBYTE  ; source byte
+    lda WORKBYTE    ; source byte
     lsr a           ; shift right once
-    sta WORKBYTE  ; store resulting shifted jawn
+    sta WORKBYTE    ; store resulting shifted jawn
 
     and #1          ; set target bit to shift register data bit; all other bits low
     sta PORTA       ; send to shift register

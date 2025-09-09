@@ -18,10 +18,10 @@ class ShiftRegister():
     def data(self, value):
         if value is not self.lastdata:
             self.data_val = value
-            if value:
-                print ("data high")
-            else:
-                print ("data low")
+            # if value:
+            #     print ("data high")
+            # else:
+            #     print ("data low")
 
         self.lastdata = value
 
@@ -30,12 +30,12 @@ class ShiftRegister():
         if value is not self.lastclock: # only if clock signal has changed
             self.clock_val = value
             if value: # clock went high
-                print ("clock high")
+                # print ("clock high")
                 if not self.latch_val: # latch is low so allow writes in
                     self.buffer.popleft()
                     self.buffer.append(self.data_val)
-            else:
-                print ("clock low")
+            # else:
+                # print ("clock low")
 
         self.lastclock = value
 
@@ -44,11 +44,11 @@ class ShiftRegister():
         if value is not self.lastlatch:
             self.latch_val = value
             if value:
-                print ("latch high; buffer to register")
+                # print ("latch high; buffer to register")
                 self.register = copy.deepcopy(self.buffer) # latch went high so update actual output
                 self.registerchangedsinceprint = True
-            else:
-                print ("latch low")
+            # else:
+            #     print ("latch low")
 
         self.lastlatch = value
 
@@ -66,9 +66,11 @@ class ShiftRegister():
     
 
     def printregister(self):
-        for i in self.register:
-            print ("*" if i else "-", end='')
-        print ()
+        if self.registerchangedsinceprint:
+            for i in self.register:
+                print ("*" if i else "-", end='')
+            print ()
+            self.registerchangedsinceprint = False
 
 
     def printbuffer(self):

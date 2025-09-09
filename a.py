@@ -3,6 +3,8 @@ from py65emu.mmu import MMU
 
 from shiftregister import ShiftRegister
 
+import time
+
 f = open("lsr.out", "rb")  # Open your rom
 
 # define your blocks of memory.  Each tuple is
@@ -43,13 +45,16 @@ for i in range(0, 9999):
         c.step()
     
         srval = c.readByte(0x6000)
-        print (c.op, "\ta:", formatByte(c.r.a), "\tx:", c.r.x, "\tsrval:", formatByte(srval), "\tsource:", formatByte(c.readByte(0x0000)))
+        # print (c.op, "\ta:", formatByte(c.r.a), "\tx:", c.r.x, "\ty:", c.r.y,
+        #        "\tsrval:", formatByte(srval), "\tsource:", formatByte(c.readByte(0x0000)))
         sr.data(bool(bit(srval, 0)))
         sr.clock(bool(bit(srval, 1)))
         sr.latch(bool(bit(srval, 2)))
         sr.printregister()
     except IndexError:
-        pass
+        exit()
+
+    time.sleep(0.0005)
     
 
 
