@@ -1,15 +1,50 @@
-SOURCEBYTE = $0000
-WORKBYTE   = $0001
+SOURCEBYTE  = $0000
+WORKBYTE    = $0001
 PATTERNBYTE = $0002
-PORTA      = $6000
+PORTA       = $6000
+input_a     = $0003
+input_x     = $0004
+input_y     = $0005
+RANDOMSTEP  = $0006
 
 
-    .org $1000
+
+    .org $8000
 
 
-_start:
-                    ; let's experi
+reset:
+    ldy #0
+    sty RANDOMSTEP
+
+    jsr checkinput
+
+
+checkinput:
+    sta input_a
+    stx input_x
+    sty input_y
+
+    ldx $6008
+    cpx #0
+    beq startcycle
+    cpx #1
+    beq startcycle2
+    cpx #2
+    beq randomloop
+    cpx #3
+    beq blinkstart
+
+    lda input_a
+    ldx input_x
+    ldy input_y
+
+    rts
+
     
+
+
+    
+startcycle:
     ldy #$00        ; fx counter 
 
 
@@ -17,7 +52,7 @@ _start:
     sta SOURCEBYTE
     jsr shiftout
 
-cycle:
+ cycle:
     lda SOURCEBYTE
     lsr a
     sta SOURCEBYTE
@@ -27,11 +62,19 @@ cycle:
     cpy #7
     bne cycle
 
+    jsr checkinput
+    
 
+
+startcycle2
     ldy #$00        ; fx counter 
 
+    lda #%00000001  ; source byte
+    sta SOURCEBYTE
+    jsr shiftout
 
-cycle2:
+
+ cycle2:
     lda SOURCEBYTE
     asl a
     sta SOURCEBYTE
@@ -40,9 +83,54 @@ cycle2:
     iny
     cpy #7
     bne cycle2
+    
+    jsr checkinput
 
 
-    jmp end
+
+
+
+randomloop:
+    ldy RANDOMSTEP
+    lda $8000, y ; program code ftw
+    sta SOURCEBYTE
+    jsr shiftout
+    iny
+    sty RANDOMSTEP
+    jsr checkinput
+    cpy #109
+    bne randomloop
+    beq reset
+
+
+
+blinkstart:
+    lda #$ff
+    sta SOURCEBYTE
+    jsr shiftout
+    ldx #0
+
+blinkonwait:
+    inx
+    cpx #40
+    bne blinkonwait
+
+    lda #$00
+    sta SOURCEBYTE
+    jsr shiftout
+    ldx #0
+
+blinkoffwait:
+    inx
+    cpx #40
+    bne blinkoffwait
+    beq blinkreset
+
+blinkreset:
+    jmp reset
+
+
+
 
 
 
@@ -93,5 +181,12 @@ shiftsteps:
 
 
 
-end:
-    nop
+
+
+
+; RANDOM .byte $8c, $91, $cb, $c0, $07, $fb, $6f, $e3, $98, $f9, $e7, $54, $19, $a9, $e5, $d8, $e4, $75, $b8, $a0, $41, $e1, $cb, $b1, $bc, $d8, $57, $d3, $23, $1d, $2f, $3a
+
+
+    .org $fffc
+    .word blinkstart
+    .word $0000

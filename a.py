@@ -11,8 +11,8 @@ f = open("lsr.out", "rb")  # Open your rom
 # (start_address, length, readOnly=True, value=None, valueOffset=0)
 mmu = MMU([
         (0x00, 0x1000), # Create RAM
-        (0x1000, 0x4000, True, f), # Create ROM starting at 0x1000 with your program.
-        (0x6000, 8, False, f)
+        (0x8000, 0x8000, True, f), # Create ROM starting at 0x1000 with your program.
+        (0x6000, 16, False, f)
 ])
 
 # Create the CPU with the MMU and the starting program counter address
@@ -20,7 +20,7 @@ mmu = MMU([
 # to 1, meaning the stack will be from 0x100-0x1ff.  As far as I know this
 # is true for all 6502s, but for instance in the 6507 used by the Atari
 # 2600 it is in the zero page, stack_page=0.
-c = CPU(mmu, 0x1000)
+c = CPU(mmu, 0x8000)
 
 sr = ShiftRegister(8)
 
@@ -39,11 +39,11 @@ for i in range(0, 10):
     print()
 
 # Do this to execute one instruction
-
-for i in range(0, 9999):
+counter = 0
+while True:
     try:
         c.step()
-    
+
         srval = c.readByte(0x6000)
         # print (c.op, "\ta:", formatByte(c.r.a), "\tx:", c.r.x, "\ty:", c.r.y,
         #        "\tsrval:", formatByte(srval), "\tsource:", formatByte(c.readByte(0x0000)))
@@ -52,9 +52,26 @@ for i in range(0, 9999):
         sr.latch(bool(bit(srval, 2)))
         sr.printregister()
     except IndexError:
+        print ('index error')
         exit()
 
     time.sleep(0.0005)
+    counter += 1
+
+    if counter == 10:
+        c.writeByte(0x6008, 0)
+
+    if counter == 4000:
+        c.writeByte(0x6008, 1)
+
+    if counter == 8000:
+        c.writeByte(0x6008, 3)
+
+    if counter == 12000:
+        c.writeByte(0x6008, 2)
+
+    if counter == 16000:
+        c.writeByte(0x6008, 3)
     
 
 
