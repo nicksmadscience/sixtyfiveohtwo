@@ -41,7 +41,7 @@ for i in range(0, 10):
 # Do this to execute one instruction
 counter = 0
 mode = 0
-c.writeByte(0x6008, 14) 
+# c.writeByte(0x6008, 0) 
 while True:
     try:
         c.step()
@@ -50,6 +50,10 @@ while True:
         # print (c.op, "\ta:", formatByte(c.r.a), "\tx:", c.r.x, "\ty:", c.r.y,
         #        "\tsrval:", formatByte(srval), "\tsource:", formatByte(c.readByte(0x0000)),
         #        "\tin:", formatByte(c.readByte(0x6008)))
+        # print ("debug:", c.readByte(0x0200),
+        #        "\tpausetime:", c.readByte(0x000d),
+        #        "\tpattern:", c.readByte(0x0015),
+        #        "\tsuperpause:", c.readByte(0x0014))
         sr.data(bool(bit(srval, 0)))
         sr.clock(bool(bit(srval, 1)))
         sr.latch(bool(bit(srval, 2)))
@@ -64,11 +68,14 @@ while True:
     # c.writeByte(0x6008, 15) 
 
     
-    if counter % 20000 == 0:
-        mode += 1
-        if mode == 8:
-            mode = 0
-        c.writeByte(0x6008, mode + 8)
+    # if counter % 20000 == 0:
+        
+    #     if mode == 16:
+    #         mode = 0
+    #     print ("mode", mode)
+        
+    #     c.writeByte(0x6008, mode)
+    #     mode += 1
 
     # input()
 

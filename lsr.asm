@@ -9,14 +9,20 @@ RANDOMSTEP   = $0006
 BLINKHIGH    = $0007
 BLINKLOW     = $0008
 BLINKCOUNTER = $0009
-PAUSE_X      = $000a
-PAUSETIME    = $000b
-TINYPAUSETIME = $000c
-SINGLESHIFTPAUSE = $000d
-ACACHE = $000e
-XCACHE = $000f
-YCACHE = $0010
-SHIFTPAUSEYCACHE = $0011
+PAUSE_A      = $000a
+PAUSE_X      = $000b
+PAUSE_Y      = $000c
+PAUSETIME    = $000d
+TINYPAUSETIME = $000e
+SINGLESHIFTPAUSE = $000f
+ACACHE = $0010
+XCACHE = $0011
+YCACHE = $0012
+SHIFTPAUSEYCACHE = $0013
+SUPERPAUSE = $0014
+DEBUG  = $0200
+PATTERN = $0015
+DEBUG_A = $0201
 
 
 
@@ -24,6 +30,9 @@ SHIFTPAUSEYCACHE = $0011
 
 
 reset:
+    lda #100
+    sta DEBUG
+
     ldy #0                ; init some stuff
     sty RANDOMSTEP
     ldy #%11111111
@@ -31,11 +40,12 @@ reset:
     ldy #%00000000
     sty BLINKLOW
 
-    lda #150            ; standard pause time; adjust according to clock speed
+    lda #50            ; standard pause time; adjust according to clock speed
     sta PAUSETIME
-
     lda #30
     sta TINYPAUSETIME
+    lda #4
+    sta SUPERPAUSE
 
 
 
@@ -50,8 +60,9 @@ checkinput:
     sta SINGLESHIFTPAUSE
 
     lda $6008             ; choose sequence based on io lines
+    sta PATTERN
 
-    nop
+
     and #%00001000
     cmp #%00001000
     beq ci_sethighspeed
@@ -61,7 +72,7 @@ postsetspeed:
     and #%00000111
 
     cmp #0
-    beq ci_randomcascadeloop
+    beq ci_randomloop
 
     cmp #1
     beq ci_startcycle
@@ -70,7 +81,7 @@ postsetspeed:
     beq ci_startcycle2
 
     cmp #3
-    beq ci_randomloop
+    beq ci_randomcascadeloop
 
     cmp #4
     beq ci_blinkstart
@@ -119,17 +130,13 @@ ci_randomloopsingleshift:
     jmp randomloop
 
 ci_sethighspeed:
-    ldy #10
-    sty PAUSETIME
-    ldy #40
-    sty TINYPAUSETIME
+    ldy #1
+    sty SUPERPAUSE
     jmp postsetspeed
 
 ci_setlowspeed:
-    ldy #70
-    sty PAUSETIME
-    ldy #255
-    sty TINYPAUSETIME
+    ldy #4
+    sty SUPERPAUSE
     jmp postsetspeed
 
 
@@ -216,6 +223,7 @@ randomloop:
     jsr shiftend
 
     jsr tinypause
+    jsr tinypause
 
     sty RANDOMSTEP
     jmp checkinput
@@ -229,16 +237,50 @@ randomreset:
 
 
 randomcascadeloop:
+    sta DEBUG_A
+    lda #10
+    sta DEBUG
+    lda DEBUG_A
+
     ldy RANDOMSTEP
 
     lda $8000, y ; program code ftw
     sta SOURCEBYTE
+
+    sta DEBUG_A
+    lda #20
+    sta DEBUG
+    lda DEBUG_A
+
     jsr singleshift
     iny             ; increment forever
+
+    sta DEBUG_A
+    lda #30
+    sta DEBUG
+    lda DEBUG_A
     
     sty RANDOMSTEP
+
+    sta DEBUG_A
+    lda #40
+    sta DEBUG
+    lda DEBUG_A
+
     jsr pause
+
+    sta DEBUG_A
+    lda #50
+    sta DEBUG
+    lda DEBUG_A
+
     jsr pause
+
+    sta DEBUG_A
+    lda #60
+    sta DEBUG
+    lda DEBUG_A
+
     jmp checkinput
 
 
@@ -466,35 +508,63 @@ shiftpause:
 
 
 pause:
+    sta PAUSE_A
     stx PAUSE_X
-    ldx #0
-    jsr pauseloop
-    rts
+    sty PAUSE_Y
 
+    ldy #0
+
+superpauseloop:
+    ldx #0
 
 pauseloop:
     inx
     cpx PAUSETIME
     bne pauseloop
 
+    iny
+    sty DEBUG
+    cpy SUPERPAUSE
+    bne superpauseloop
+
+    lda PAUSE_A
     ldx PAUSE_X
+    ldy PAUSE_Y
+
     rts
+
+
+
+
+    
+
 
 
 
 tinypause:
+    sta PAUSE_A
     stx PAUSE_X
-    ldx #0
-    jsr tinypauseloop
-    rts
+    sty PAUSE_Y
 
+    ldy #0
+
+supertinypauseloop:
+    ldx #0
 
 tinypauseloop:
     inx
     cpx TINYPAUSETIME
     bne tinypauseloop
 
+    iny
+    sty DEBUG
+    cpy SUPERPAUSE
+    bne supertinypauseloop
+
+    lda PAUSE_A
     ldx PAUSE_X
+    ldy PAUSE_Y
+
     rts
 
 
