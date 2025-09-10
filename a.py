@@ -58,17 +58,17 @@ while True:
         print ('index error')
         exit()
 
-    time.sleep(0.0002)
+    time.sleep(0.0001)
     counter += 1
 
     # c.writeByte(0x6008, 15) 
 
     
-    # if counter % 20000 == 0:
-    #     mode += 1
-    #     if mode == 8:
-    #         mode = 0
-    #     c.writeByte(0x6008, mode + 8)
+    if counter % 20000 == 0:
+        mode += 1
+        if mode == 8:
+            mode = 0
+        c.writeByte(0x6008, mode + 8)
 
     # input()
 

@@ -150,6 +150,8 @@ startcycle:
     sta SOURCEBYTE
     jsr singleshift
     jsr pause
+    jsr pause
+    jsr pause
 
     iny
     cpy #7
@@ -172,6 +174,8 @@ startcycle2
     asl a
     sta SOURCEBYTE
     jsr singleshift
+    jsr pause
+    jsr pause
     jsr pause
 
     iny
@@ -233,6 +237,7 @@ randomcascadeloop:
     iny             ; increment forever
     
     sty RANDOMSTEP
+    jsr pause
     jsr pause
     jmp checkinput
 
