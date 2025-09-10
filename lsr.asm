@@ -11,13 +11,20 @@ BLINKLOW     = $0008
 BLINKCOUNTER = $0009
 PAUSE_X      = $000a
 PAUSETIME    = $000b
+TINYPAUSETIME = $000c
+SINGLESHIFTPAUSE = $000d
+ACACHE = $000e
+XCACHE = $000f
+YCACHE = $0010
+SHIFTPAUSEYCACHE = $0011
+
 
 
     .org $8000
 
 
 reset:
-    ldy #0
+    ldy #0                ; init some stuff
     sty RANDOMSTEP
     ldy #%11111111
     sty BLINKHIGH
@@ -27,28 +34,57 @@ reset:
     lda #150            ; standard pause time; adjust according to clock speed
     sta PAUSETIME
 
+    lda #30
+    sta TINYPAUSETIME
+
+
 
 
 checkinput:
-    sta input_a
+    sta input_a           ; cache the registers; more important if it's actually an interrupt
     stx input_x
     sty input_y
 
-    ldx $6008
-    cpx #0
-    beq ci_startcycle
-    cpx #1
-    beq ci_startcycle2
-    cpx #2
-    beq ci_randomloop
-    cpx #3
-    beq ci_blinkstart
-    cpx #4
+
+    lda #0
+    sta SINGLESHIFTPAUSE
+
+    lda $6008             ; choose sequence based on io lines
+
+    nop
+    and #%00001000
+    cmp #%00001000
+    beq ci_sethighspeed
+    bne ci_setlowspeed
+postsetspeed:
+    lda $6008             ; choose sequence based on io lines
+    and #%00000111
+
+    cmp #0
     beq ci_randomcascadeloop
-    cpx #5
+
+    cmp #1
+    beq ci_startcycle
+
+    cmp #2
+    beq ci_startcycle2
+
+    cmp #3
+    beq ci_randomloop
+
+    cmp #4
+    beq ci_blinkstart
+
+    cmp #5
     beq ci_allblink
-    cpx #6
+
+    cmp #6
     beq ci_cylon
+
+    cmp #7
+    beq ci_randomloopsingleshift
+
+
 
     lda input_a
     ldx input_x
@@ -56,7 +92,7 @@ checkinput:
 
 
 
-ci_startcycle:
+ci_startcycle:              ; avoid branch-out-of-range stuff
     jmp startcycle
 
 ci_startcycle2:
@@ -68,14 +104,35 @@ ci_randomloop:
 ci_blinkstart:
     jmp blinkstart
 
-ci_randomcascadeloop
+ci_randomcascadeloop:
     jmp randomcascadeloop
 
-ci_allblink
+ci_allblink:
     jmp allblink
 
-ci_cylon
+ci_cylon:
     jmp cylon
+
+ci_randomloopsingleshift:
+    lda #1
+    sta SINGLESHIFTPAUSE
+    jmp randomloop
+
+ci_sethighspeed:
+    ldy #10
+    sty PAUSETIME
+    ldy #40
+    sty TINYPAUSETIME
+    jmp postsetspeed
+
+ci_setlowspeed:
+    ldy #70
+    sty PAUSETIME
+    ldy #255
+    sty TINYPAUSETIME
+    jmp postsetspeed
+
+
 
 
     
@@ -154,9 +211,11 @@ randomloop:
     iny
     jsr shiftend
 
+    jsr tinypause
+
     sty RANDOMSTEP
     jmp checkinput
-    cpy #150
+    cpy #255
     bne randomloop
     beq randomreset
 
@@ -171,18 +230,12 @@ randomcascadeloop:
     lda $8000, y ; program code ftw
     sta SOURCEBYTE
     jsr singleshift
-    iny
+    iny             ; increment forever
     
     sty RANDOMSTEP
     jsr pause
     jmp checkinput
-    cpy #150
-    bne randomcascadeloop
-    beq randomcascadereset
 
-
-randomcascadereset:
-    jmp reset
 
 
 
@@ -320,6 +373,8 @@ cylonright:
 
 
 
+
+
 singleshift:
     jsr shiftstart
     jsr shiftout
@@ -344,6 +399,10 @@ shiftend:
 
 
 shiftout:
+    sta ACACHE
+    stx XCACHE
+    sty YCACHE
+
     ldx #$00        ; shift counter
 
     lda SOURCEBYTE  ; source byte
@@ -358,6 +417,10 @@ shiftout:
 
     jsr shiftsteps  ; shift remaining steps
 
+    lda ACACHE
+    ldx XCACHE
+    ldy YCACHE
+
     rts
 
 
@@ -370,14 +433,31 @@ shiftsteps:
     and #1          ; set target bit to shift register data bit; all other bits low
     sta PORTA       ; send to shift register
 
+    sty SHIFTPAUSEYCACHE
+    ldy SINGLESHIFTPAUSE
+    cpy #1
+    beq shiftpause
+    
     ora #2          ; set clock bit high
+    
+shiftresume:
     sta PORTA       ; send to shift register
-
+    ldy SHIFTPAUSEYCACHE
     inx             ; increment counter
     cpx #7          ; go to eight bits
     bne shiftsteps  ; if we're not there, repeat
 
     rts
+
+shiftpause:
+    ora #6          ; shift in place
+    jsr pause
+    jmp shiftresume
+
+
+
+
+
 
 
 pause:
@@ -391,6 +471,23 @@ pauseloop:
     inx
     cpx PAUSETIME
     bne pauseloop
+
+    ldx PAUSE_X
+    rts
+
+
+
+tinypause:
+    stx PAUSE_X
+    ldx #0
+    jsr tinypauseloop
+    rts
+
+
+tinypauseloop:
+    inx
+    cpx TINYPAUSETIME
+    bne tinypauseloop
 
     ldx PAUSE_X
     rts
