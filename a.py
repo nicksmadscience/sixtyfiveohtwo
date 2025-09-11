@@ -68,14 +68,14 @@ while True:
     # c.writeByte(0x6008, 15) 
 
     
-    # if counter % 20000 == 0:
+    if counter % 20000 == 0:
         
-    #     if mode == 16:
-    #         mode = 0
-    #     print ("mode", mode)
+        if mode == 16:
+            mode = 0
+        print ("mode", mode)
         
-    #     c.writeByte(0x6008, mode)
-    #     mode += 1
+        c.writeByte(0x6008, mode)
+        mode += 1
 
     # input()
 

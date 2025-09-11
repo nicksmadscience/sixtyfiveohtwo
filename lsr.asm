@@ -20,9 +20,11 @@ XCACHE = $0011
 YCACHE = $0012
 SHIFTPAUSEYCACHE = $0013
 SUPERPAUSE = $0014
-DEBUG  = $0200
 PATTERN = $0015
+
+DEBUG  = $0200
 DEBUG_A = $0201
+
 
 
 
@@ -30,9 +32,6 @@ DEBUG_A = $0201
 
 
 reset:
-    lda #100
-    sta DEBUG
-
     ldy #0                ; init some stuff
     sty RANDOMSTEP
     ldy #%11111111
@@ -237,49 +236,18 @@ randomreset:
 
 
 randomcascadeloop:
-    sta DEBUG_A
-    lda #10
-    sta DEBUG
-    lda DEBUG_A
-
     ldy RANDOMSTEP
 
     lda $8000, y ; program code ftw
     sta SOURCEBYTE
 
-    sta DEBUG_A
-    lda #20
-    sta DEBUG
-    lda DEBUG_A
-
     jsr singleshift
     iny             ; increment forever
-
-    sta DEBUG_A
-    lda #30
-    sta DEBUG
-    lda DEBUG_A
     
     sty RANDOMSTEP
 
-    sta DEBUG_A
-    lda #40
-    sta DEBUG
-    lda DEBUG_A
-
     jsr pause
-
-    sta DEBUG_A
-    lda #50
-    sta DEBUG
-    lda DEBUG_A
-
     jsr pause
-
-    sta DEBUG_A
-    lda #60
-    sta DEBUG
-    lda DEBUG_A
 
     jmp checkinput
 
@@ -523,7 +491,6 @@ pauseloop:
     bne pauseloop
 
     iny
-    sty DEBUG
     cpy SUPERPAUSE
     bne superpauseloop
 
@@ -557,7 +524,6 @@ tinypauseloop:
     bne tinypauseloop
 
     iny
-    sty DEBUG
     cpy SUPERPAUSE
     bne supertinypauseloop
 
