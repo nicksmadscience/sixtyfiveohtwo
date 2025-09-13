@@ -41,15 +41,25 @@ for i in range(0, 10):
 # Do this to execute one instruction
 counter = 0
 mode = 0
-# c.writeByte(0x6008, 0) 
+
+nopdebug = False
 while True:
     try:
         c.step()
 
         srval = c.readByte(0x6000)
-        # print (c.op, "\ta:", formatByte(c.r.a), "\tx:", c.r.x, "\ty:", c.r.y,
-        #        "\tsrval:", formatByte(srval), "\tsource:", formatByte(c.readByte(0x0000)),
-        #        "\tin:", formatByte(c.readByte(0x6008)))
+        # if str(c.op)[0:2] == "NOP":
+        #     nopdebug = True
+        # if c.readByte(0x0015) == 2 and c.readByte(0x0016) == 32:
+        #     nopdebug = True
+        if nopdebug:
+            # print (c.op, "\ta:", formatByte(c.r.a), "\tx:", c.r.x, "\ty:", c.r.y,
+            #     "\tsrval:", formatByte(srval), "\tsource:", formatByte(c.readByte(0x0000)),
+            #     "\tin:", formatByte(c.readByte(0x6008)))
+            print ("debug:", c.readByte(0x0200))
+            # print ("pattern:", c.readByte(0x0015))
+            # print ("patterntimer:", c.readByte(0x0016))
+            # input()
         # print ("debug:", c.readByte(0x0200),
         #        "\tpausetime:", c.readByte(0x000d),
         #        "\tpattern:", c.readByte(0x0015),
@@ -57,7 +67,11 @@ while True:
         sr.data(bool(bit(srval, 0)))
         sr.clock(bool(bit(srval, 1)))
         sr.latch(bool(bit(srval, 2)))
-        sr.printregister()
+        if sr.printregister():
+            print ("debug:", c.readByte(0x0200))
+            print ("pattern:", c.readByte(0x0015))
+            print ("patterntimer:", c.readByte(0x0016))
+
     except IndexError:
         print ('index error')
         exit()
@@ -67,15 +81,19 @@ while True:
 
     # c.writeByte(0x6008, 15) 
 
+    if counter == 50000:
+        print ("rofl")
+        c.writeByte(0x6008, 2)
+
     
-    if counter % 20000 == 0:
+    # if counter % 20000 == 0:
         
-        if mode == 16:
-            mode = 0
-        print ("mode", mode)
+    #     if mode == 8:
+    #         mode = 0
+    #     print ("mode", mode)
         
-        c.writeByte(0x6008, mode)
-        mode += 1
+    #     c.writeByte(0x6008, mode)
+    #     mode += 1
 
     # input()
 

@@ -21,6 +21,8 @@ YCACHE = $0012
 SHIFTPAUSEYCACHE = $0013
 SUPERPAUSE = $0014
 PATTERN = $0015
+PATTERNTIMER = $0016
+LASTINPUT = $0017
 
 DEBUG  = $0200
 DEBUG_A = $0201
@@ -54,30 +56,46 @@ checkinput:
     stx input_x
     sty input_y
 
-
     lda #0
     sta SINGLESHIFTPAUSE
 
     lda $6008             ; choose sequence based on io lines
+    sta LASTINPUT
+
+    cmp #0
+    beq patternfromtimer
+    bne patternfromio
+
+    nop
+
+patternfromio:
     sta PATTERN
-
-
+    jmp afterpatternselect
+patternfromtimer:
+    lda PATTERNTIMER
+    lsr a
+    lsr a
+    lsr a
+    lsr a
+    and #%00000111
+    sta PATTERN
+afterpatternselect:
     and #%00001000
     cmp #%00001000
     beq ci_sethighspeed
     bne ci_setlowspeed
 postsetspeed:
-    lda $6008             ; choose sequence based on io lines
+    lda PATTERN             
     and #%00000111
 
     cmp #0
     beq ci_randomloop
 
     cmp #1
-    beq ci_startcycle
+    beq ci_randomloop
 
     cmp #2
-    beq ci_startcycle2
+    beq ci_startcycle
 
     cmp #3
     beq ci_randomcascadeloop
@@ -105,8 +123,6 @@ postsetspeed:
 ci_startcycle:              ; avoid branch-out-of-range stuff
     jmp startcycle
 
-ci_startcycle2:
-    jmp startcycle2
 
 ci_randomloop:
     jmp randomloop
@@ -145,7 +161,6 @@ ci_setlowspeed:
 startcycle:
     ldy #$00        ; fx counter 
 
-
     lda #%10000000  ; source byte
     sta SOURCEBYTE
     jsr singleshift
@@ -157,38 +172,27 @@ startcycle:
     jsr singleshift
     jsr pause
     jsr pause
-    jsr pause
+
+    ldx $6008              ; quick input check to keep pace consistent
+    cpx LASTINPUT
+    bne cyclecheckinput
+    beq cycleincrementpattern
+cyclereturnfromincrement:
 
     iny
     cpy #7
     bne cycle
 
     jmp checkinput
-    
 
+cycleincrementpattern:
+    inc PATTERNTIMER
+    jmp cyclereturnfromincrement
 
-startcycle2
-    ldy #$00        ; fx counter 
-
-    lda #%00000001  ; source byte
-    sta SOURCEBYTE
-    jsr singleshift
-
-
- cycle2:
-    lda SOURCEBYTE
-    asl a
-    sta SOURCEBYTE
-    jsr singleshift
-    jsr pause
-    jsr pause
-    jsr pause
-
-    iny
-    cpy #7
-    bne cycle2
-    
+cyclecheckinput:
     jmp checkinput
+    
+
 
 
 
@@ -196,7 +200,6 @@ startcycle2
 
 randomloop:
     ldy RANDOMSTEP
-
 
     jsr shiftstart
     lda $8000, y ; program code ftw
@@ -224,6 +227,8 @@ randomloop:
     jsr tinypause
     jsr tinypause
 
+    inc PATTERNTIMER
+
     sty RANDOMSTEP
     jmp checkinput
     cpy #255
@@ -246,6 +251,8 @@ randomcascadeloop:
     
     sty RANDOMSTEP
 
+    inc PATTERNTIMER
+
     jsr pause
     jsr pause
 
@@ -263,6 +270,8 @@ blinkstart:
     jsr pause
     jsr pause
 
+    inc PATTERNTIMER
+
     lda BLINKLOW
     sta SOURCEBYTE
     jsr singleshift
@@ -270,6 +279,8 @@ blinkstart:
 
     jsr pause
     jsr pause
+
+    inc PATTERNTIMER
 
     ; increment blink counter
     ldy BLINKCOUNTER
@@ -322,7 +333,8 @@ allblink:
     jsr shiftfive
     jsr pause
     jsr pause
-    jsr pause
+
+    inc PATTERNTIMER
 
     lda #$00
     sta SOURCEBYTE
@@ -330,7 +342,8 @@ allblink:
     jsr shiftfive
     jsr pause
     jsr pause
-    jsr pause
+
+    inc PATTERNTIMER
 
     jmp checkinput
 
@@ -352,18 +365,24 @@ cylon:
     sta SOURCEBYTE
     jsr shiftfive
 
+    inc PATTERNTIMER
+
     jsr cylonleft
     jsr cylonleft
     jsr cylonleft
     jsr cylonleft
+    inc PATTERNTIMER
     jsr cylonleft
     jsr cylonleft
     jsr cylonleft
+
+    inc PATTERNTIMER
 
     jsr cylonright
     jsr cylonright
     jsr cylonright
     jsr cylonright
+    inc PATTERNTIMER
     jsr cylonright
     jsr cylonright
     jsr cylonright
@@ -454,6 +473,7 @@ shiftsteps:
     beq shiftpause
     
     ora #2          ; set clock bit high
+
     
 shiftresume:
     sta PORTA       ; send to shift register
@@ -467,6 +487,8 @@ shiftresume:
 shiftpause:
     ora #6          ; shift in place
     jsr pause
+    jsr pause
+    inc PATTERNTIMER
     jmp shiftresume
 
 

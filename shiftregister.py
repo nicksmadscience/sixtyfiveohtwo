@@ -75,6 +75,8 @@ class ShiftRegister():
                     print ()
             print ()
             self.registerchangedsinceprint = False
+            return True
+        return False
 
 
     def printbuffer(self):
