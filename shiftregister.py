@@ -75,7 +75,9 @@ class ShiftRegister():
                     print ()
             print ()
             self.registerchangedsinceprint = False
-            return True
+            
+            return True # in case something else needs to happen alongside the update, such as debug
+        
         return False
 
 

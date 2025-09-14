@@ -77,6 +77,8 @@ patternfromtimer:
     lsr a
     lsr a
     lsr a
+    lsr a
+    sta DEBUG
     and #%00000111
     sta PATTERN
 afterpatternselect:
@@ -335,6 +337,7 @@ allblink:
     jsr pause
 
     inc PATTERNTIMER
+    inc PATTERNTIMER
 
     lda #$00
     sta SOURCEBYTE
@@ -343,6 +346,7 @@ allblink:
     jsr pause
     jsr pause
 
+    inc PATTERNTIMER
     inc PATTERNTIMER
 
     jmp checkinput

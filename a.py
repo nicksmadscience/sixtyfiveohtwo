@@ -81,9 +81,9 @@ while True:
 
     # c.writeByte(0x6008, 15) 
 
-    if counter == 50000:
-        print ("rofl")
-        c.writeByte(0x6008, 2)
+    # if counter == 50000:
+    #     print ("rofl")
+    #     c.writeByte(0x6008, 2)
 
     
     # if counter % 20000 == 0:
