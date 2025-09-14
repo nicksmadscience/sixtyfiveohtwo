@@ -23,8 +23,10 @@ SUPERPAUSE = $0014
 PATTERN = $0015
 PATTERNTIMER = $0016
 LASTINPUT = $0017
-SINGLEDOT_A = $0018
-SINGLEDOT_X = $0019
+SNAKE_A = $0018
+SNAKE_X = $0019
+SNAKE_Y = $0020
+SNAKECOUNTER = $0021
 
 DEBUG  = $0200
 DEBUG_A = $0201
@@ -92,7 +94,7 @@ postsetspeed:
     and #%00000111
 
     cmp #0
-    beq ci_singledot
+    beq ci_snake
 
     cmp #1
     beq ci_randomloop
@@ -124,8 +126,8 @@ postsetspeed:
 
 
 
-ci_singledot:               ; avoid branch-out-of-range stuff
-    jmp singledot
+ci_snake:               ; avoid branch-out-of-range stuff
+    jmp snake
 
 ci_randomloop:
     jmp randomloop
@@ -165,15 +167,36 @@ ci_setlowspeed:
 
 
 ; pattern 0 (y'know, it occurs to me that there's no way to select the normal-speed version of this manually)
-singledot:
-    sta SINGLEDOT_A
-    stx SINGLEDOT_X
+snake:
+    sta SNAKE_A
+    stx SNAKE_X
+    sty SNAKE_Y
 
-    ldx #0
+    lda SNAKECOUNTER
+    cmp #7
+    bcs resetsnakecounter      ; reset snakecounter if it's too high
+
+postresetsnakecounter:
+    inc SNAKECOUNTER
+
+    ldx #0              ; low counter
+    ldy #0              ; high counter
+
+highdot:
     lda #1
     sta PORTA
     lda #7
     sta PORTA           ; initial high bit
+
+    sty DEBUG
+
+    jsr tinypause
+
+    iny
+    cpy SNAKECOUNTER
+    bne highdot
+
+    inc SNAKECOUNTER  ; for dramatic effect
     
 dot:
     lda #0              ; shift remaining low bits manually
@@ -187,22 +210,26 @@ dot:
     bne dot
 
     ldx #0
-singledotcountupby8:
+
+snakecountupby8:
     inc PATTERNTIMER
     inx
     cpx #8                  ; count up eight at a time
-    bne singledotcountupby8
+    bne snakecountupby8
 
-    lda SINGLEDOT_A
-    ldx SINGLEDOT_X
+    lda SNAKE_A
+    ldx SNAKE_X
+    ldy SNAKE_Y
 
     jmp checkinput
 
+resetsnakecounter:
+    lda #0                  ; zero because it's about to be incremented to one 
+    sta SNAKECOUNTER
+    jmp postresetsnakecounter
 
 
 
-
-    
 
 
 
@@ -284,7 +311,7 @@ cycleincrementpattern:
 
 cyclecheckinput:
     jmp checkinput
-    
+
 
 
 
@@ -335,13 +362,13 @@ blinkstart:
     ldy BLINKCOUNTER
     iny
     sty BLINKCOUNTER
-    cpy #10
+    cpy #3
     beq blinkpattern1
-    cpy #20
+    cpy #6
     beq blinkpattern2
-    cpy #30
+    cpy #9
     beq blinkpattern3
-    cpy #40
+    cpy #12
     beq resetblinkcounter
     jmp blinkreset
 
@@ -374,6 +401,9 @@ blinkreset:
     jmp checkinput
 
 
+
+
+
 ; pattern 5
 allblink:
     lda #$ff
@@ -399,17 +429,6 @@ allblink:
     jmp checkinput
 
 
-
-
-shiftfive:
-    jsr shiftstart
-    jsr shiftout
-    jsr shiftout
-    jsr shiftout
-    jsr shiftout
-    jsr shiftout
-    jsr shiftend
-    rts
 
 
 
@@ -463,7 +482,21 @@ cylonright:
 
 
 
-singleshift:
+;;; shift register subroutines
+
+shiftfive:
+    jsr shiftstart
+    jsr shiftout
+    jsr shiftout
+    jsr shiftout
+    jsr shiftout
+    jsr shiftout
+    jsr shiftend
+    rts
+
+
+
+singleshift:  ; shift a single byte
     jsr shiftstart
     jsr shiftout
     jsr shiftend
@@ -483,9 +516,6 @@ shiftend:
     lda #%00000100  ; latch high; we're done here
     sta PORTA       ; send to shift register
     rts
-
-
-
 
 
 
@@ -552,7 +582,7 @@ shiftpause:
 
 
 
-
+;;; pause subroutines
 
 pause:
     sta PAUSE_A
@@ -582,11 +612,6 @@ pauseloop:
 
 
 
-    
-
-
-
-
 tinypause:
     sta PAUSE_A
     stx PAUSE_X
@@ -611,8 +636,6 @@ tinypauseloop:
     ldy PAUSE_Y
 
     rts
-
-
 
 
 
