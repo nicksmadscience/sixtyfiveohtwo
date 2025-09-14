@@ -53,14 +53,14 @@ while True:
         # if c.readByte(0x0015) == 2 and c.readByte(0x0016) == 32:
         #     nopdebug = True
         if nopdebug:
-            # print (c.op, "\ta:", formatByte(c.r.a), "\tx:", c.r.x, "\ty:", c.r.y,
-            #     "\tsrval:", formatByte(srval), "\tsource:", formatByte(c.readByte(0x0000)),
-            #     "\tin:", formatByte(c.readByte(0x6008)))
-            print ("debug:", c.readByte(0x0200))
+            print (c.op, "\ta:", formatByte(c.r.a), "\tx:", c.r.x, "\ty:", c.r.y,
+                "\tsrval:", formatByte(srval), "\tsource:", formatByte(c.readByte(0x0000)),
+                "\tin:", formatByte(c.readByte(0x6008)))
+            # print ("debug:", c.readByte(0x0200))
             # print ("pattern:", c.readByte(0x0015))
             # print ("patterntimer:", c.readByte(0x0016))
             # input()
-        # print ("debug:", c.readByte(0x0200),
+        # print ("debug:", c.readByte(0x0200))
         #        "\tpausetime:", c.readByte(0x000d),
         #        "\tpattern:", c.readByte(0x0015),
         #        "\tsuperpause:", c.readByte(0x0014))

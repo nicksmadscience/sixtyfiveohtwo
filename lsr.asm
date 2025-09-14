@@ -15,14 +15,16 @@ PAUSE_Y      = $000c
 PAUSETIME    = $000d
 TINYPAUSETIME = $000e
 SINGLESHIFTPAUSE = $000f
-ACACHE = $0010
-XCACHE = $0011
-YCACHE = $0012
-SHIFTPAUSEYCACHE = $0013
+A_CS = $0010
+X_CS = $0011
+Y_CS = $0012
+SHIFTPAUSEY_CS = $0013
 SUPERPAUSE = $0014
 PATTERN = $0015
 PATTERNTIMER = $0016
 LASTINPUT = $0017
+SINGLEDOT_A = $0018
+SINGLEDOT_X = $0019
 
 DEBUG  = $0200
 DEBUG_A = $0201
@@ -52,7 +54,7 @@ reset:
 
 
 checkinput:
-    sta input_a           ; cache the registers; more important if it's actually an interrupt
+    sta input_a           ; save the registers; more important if it's actually an interrupt
     stx input_x
     sty input_y
 
@@ -62,11 +64,10 @@ checkinput:
     lda $6008             ; choose sequence based on io lines
     sta LASTINPUT
 
-    cmp #0
-    beq patternfromtimer
-    bne patternfromio
+    cmp #0                
+    beq patternfromtimer  ; if all inputs are low, use timer
+    bne patternfromio     ; otherwise, use inputs
 
-    nop
 
 patternfromio:
     sta PATTERN
@@ -79,7 +80,7 @@ patternfromtimer:
     lsr a
     lsr a
     sta DEBUG
-    and #%00000111
+    and #%00000111      ; determines pattern
     sta PATTERN
 afterpatternselect:
     and #%00001000
@@ -91,7 +92,7 @@ postsetspeed:
     and #%00000111
 
     cmp #0
-    beq ci_randomloop
+    beq ci_singledot
 
     cmp #1
     beq ci_randomloop
@@ -115,19 +116,22 @@ postsetspeed:
     beq ci_randomloopsingleshift
 
 
-
     lda input_a
     ldx input_x
     ldy input_y
 
 
 
-ci_startcycle:              ; avoid branch-out-of-range stuff
-    jmp startcycle
 
+
+ci_singledot:               ; avoid branch-out-of-range stuff
+    jmp singledot
 
 ci_randomloop:
     jmp randomloop
+
+ci_startcycle:              
+    jmp startcycle
 
 ci_blinkstart:
     jmp blinkstart
@@ -159,7 +163,94 @@ ci_setlowspeed:
 
 
 
+
+; pattern 0 (y'know, it occurs to me that there's no way to select the normal-speed version of this manually)
+singledot:
+    sta SINGLEDOT_A
+    stx SINGLEDOT_X
+
+    ldx #0
+    lda #1
+    sta PORTA
+    lda #7
+    sta PORTA           ; initial high bit
     
+dot:
+    lda #0              ; shift remaining low bits manually
+    sta PORTA
+    lda #6
+    sta PORTA
+    jsr tinypause
+
+    inx
+    cpx #40             ; increment through all 40 leds
+    bne dot
+
+    ldx #0
+singledotcountupby8:
+    inc PATTERNTIMER
+    inx
+    cpx #8                  ; count up eight at a time
+    bne singledotcountupby8
+
+    lda SINGLEDOT_A
+    ldx SINGLEDOT_X
+
+    jmp checkinput
+
+
+
+
+
+    
+
+
+
+; pattern 1, 7
+randomloop:
+    ldy RANDOMSTEP
+
+    jsr shiftstart
+    lda $8000, y ; program code ftw
+    sta SOURCEBYTE
+    jsr shiftout
+    iny
+    lda $8000, y
+    sta SOURCEBYTE
+    jsr shiftout
+    iny
+    lda $8000, y
+    sta SOURCEBYTE
+    jsr shiftout
+    iny
+    lda $8000, y
+    sta SOURCEBYTE
+    jsr shiftout
+    iny
+    lda $8000, y
+    sta SOURCEBYTE
+    jsr shiftout
+    iny
+    jsr shiftend
+
+    jsr tinypause
+    jsr tinypause
+
+    inc PATTERNTIMER
+
+    sty RANDOMSTEP
+    jmp checkinput
+    cpy #255
+    bne randomloop
+    beq randomreset
+
+randomreset:
+    jmp reset
+
+
+
+
+; pattern 2
 startcycle:
     ldy #$00        ; fx counter 
 
@@ -197,51 +288,7 @@ cyclecheckinput:
 
 
 
-
-
-
-randomloop:
-    ldy RANDOMSTEP
-
-    jsr shiftstart
-    lda $8000, y ; program code ftw
-    sta SOURCEBYTE
-    jsr shiftout
-    iny
-    lda $8000, y ; program code ftw
-    sta SOURCEBYTE
-    jsr shiftout
-    iny
-    lda $8000, y ; program code ftw
-    sta SOURCEBYTE
-    jsr shiftout
-    iny
-    lda $8000, y ; program code ftw
-    sta SOURCEBYTE
-    jsr shiftout
-    iny
-    lda $8000, y ; program code ftw
-    sta SOURCEBYTE
-    jsr shiftout
-    iny
-    jsr shiftend
-
-    jsr tinypause
-    jsr tinypause
-
-    inc PATTERNTIMER
-
-    sty RANDOMSTEP
-    jmp checkinput
-    cpy #255
-    bne randomloop
-    beq randomreset
-
-randomreset:
-    jmp reset
-
-
-
+; pattern 3
 randomcascadeloop:
     ldy RANDOMSTEP
 
@@ -262,7 +309,7 @@ randomcascadeloop:
 
 
 
-
+; pattern 4
 blinkstart:
     lda BLINKHIGH
     sta SOURCEBYTE
@@ -327,7 +374,7 @@ blinkreset:
     jmp checkinput
 
 
-
+; pattern 5
 allblink:
     lda #$ff
     sta SOURCEBYTE
@@ -352,6 +399,8 @@ allblink:
     jmp checkinput
 
 
+
+
 shiftfive:
     jsr shiftstart
     jsr shiftout
@@ -364,6 +413,7 @@ shiftfive:
 
 
 
+; pattern 6
 cylon:
     lda #%10000000
     sta SOURCEBYTE
@@ -436,10 +486,13 @@ shiftend:
 
 
 
+
+
+
 shiftout:
-    sta ACACHE
-    stx XCACHE
-    sty YCACHE
+    sta A_CS
+    stx X_CS
+    sty Y_CS
 
     ldx #$00        ; shift counter
 
@@ -455,9 +508,9 @@ shiftout:
 
     jsr shiftsteps  ; shift remaining steps
 
-    lda ACACHE
-    ldx XCACHE
-    ldy YCACHE
+    lda A_CS
+    ldx X_CS
+    ldy Y_CS
 
     rts
 
@@ -471,7 +524,7 @@ shiftsteps:
     and #1          ; set target bit to shift register data bit; all other bits low
     sta PORTA       ; send to shift register
 
-    sty SHIFTPAUSEYCACHE
+    sty SHIFTPAUSEY_CS
     ldy SINGLESHIFTPAUSE
     cpy #1
     beq shiftpause
@@ -481,7 +534,7 @@ shiftsteps:
     
 shiftresume:
     sta PORTA       ; send to shift register
-    ldy SHIFTPAUSEYCACHE
+    ldy SHIFTPAUSEY_CS
     inx             ; increment counter
     cpx #7          ; go to eight bits
     bne shiftsteps  ; if we're not there, repeat
