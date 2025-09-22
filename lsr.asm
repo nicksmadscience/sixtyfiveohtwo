@@ -1,44 +1,44 @@
-SOURCEBYTE   = $0000
-WORKBYTE     = $0001
-PATTERNBYTE  = $0002
-PORTA        = $6000
-input_a      = $0003
-input_x      = $0004
-input_y      = $0005
-RANDOMSTEP   = $0006
-BLINKHIGH    = $0007
-BLINKLOW     = $0008
-BLINKCOUNTER = $0009
-PAUSE_A      = $000a
-PAUSE_X      = $000b
-PAUSE_Y      = $000c
-PAUSETIME    = $000d
-TINYPAUSETIME = $000e
+SOURCEBYTE       = $0000
+WORKBYTE         = $0001
+PATTERNBYTE      = $0002
+PORTA            = $6000
+input_a          = $0003
+input_x          = $0004
+input_y          = $0005
+RANDOMSTEP       = $0006
+BLINKHIGH        = $0007
+BLINKLOW         = $0008
+BLINKCOUNTER     = $0009
+PAUSE_A          = $000a
+PAUSE_X          = $000b
+PAUSE_Y          = $000c
+PAUSETIME        = $000d
+TINYPAUSETIME    = $000e
 SINGLESHIFTPAUSE = $000f
-A_CS = $0010
-X_CS = $0011
-Y_CS = $0012
-SHIFTPAUSEY_CS = $0013
-SUPERPAUSE = $0014
-PATTERN = $0015
-PATTERNTIMER = $0016
-LASTINPUT = $0017
-SNAKE_A = $0018
-SNAKE_X = $0019
-SNAKE_Y = $0020
-SNAKECOUNTER = $0021
+A_CS             = $0010
+X_CS             = $0011
+Y_CS             = $0012
+SHIFTPAUSEY_CS   = $0013
+SUPERPAUSE       = $0014
+PATTERN          = $0015
+PATTERNTIMER     = $0016
+LASTINPUT        = $0017
+SNAKE_A          = $0018
+SNAKE_X          = $0019
+SNAKE_Y          = $0020
+SNAKECOUNTER     = $0021
 
-DEBUG  = $0200
-DEBUG_A = $0201
-
-
+DEBUG            = $0200
+DEBUG_A          = $0201
 
 
-    .org $8000
+
+
+    .org $8000   ; rom starts here
 
 
 reset:
-    ldy #0                ; init some stuff
+    ldy #0             ; init some stuff
     sty RANDOMSTEP
     ldy #%11111111
     sty BLINKHIGH
@@ -196,7 +196,7 @@ highdot:
     cpy SNAKECOUNTER
     bne highdot
 
-    inc SNAKECOUNTER  ; for dramatic effect
+    inc SNAKECOUNTER    ; for dramatic effect
     
 dot:
     lda #0              ; shift remaining low bits manually
@@ -411,10 +411,11 @@ allblink:
 
     jsr shiftfive
     jsr pause
-    jsr pause
 
     inc PATTERNTIMER
     inc PATTERNTIMER
+    inc PATTERNTIMER
+    inc PATTERNTIMER    ; this one sucks; don't stay on it long
 
     lda #$00
     sta SOURCEBYTE
@@ -425,9 +426,10 @@ allblink:
 
     inc PATTERNTIMER
     inc PATTERNTIMER
+    inc PATTERNTIMER
+    inc PATTERNTIMER
 
     jmp checkinput
-
 
 
 
@@ -444,7 +446,7 @@ cylon:
     jsr cylonleft
     jsr cylonleft
     jsr cylonleft
-    inc PATTERNTIMER
+    inc PATTERNTIMER  ; keep the pace
     jsr cylonleft
     jsr cylonleft
     jsr cylonleft
@@ -554,7 +556,7 @@ shiftsteps:
     and #1          ; set target bit to shift register data bit; all other bits low
     sta PORTA       ; send to shift register
 
-    sty SHIFTPAUSEY_CS
+    sty SHIFTPAUSEY_CS  ; see if we're in shift-out-every-bit mode
     ldy SINGLESHIFTPAUSE
     cpy #1
     beq shiftpause
